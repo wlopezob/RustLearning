@@ -25,7 +25,7 @@ fn abrir_crear_archivo() {
     };
 }
 
-fn main() {
+fn errores() {
     abrir_crear_archivo();
     let texto = leer_usuario_desde_fichero().unwrap();
     println!("El contenido es {texto}");
