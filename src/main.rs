@@ -1,75 +1,74 @@
-macro_rules! say_hello {
-    // `()` indicates that the macro takes no argument.
-    () => {
-        // The macro will expand into the contents of this block.
-        println!("Hello!");
-    };
+fn add_five<F>(func: F)
+where
+    F: Fn(i32),
+{
+    func(5)
 }
 
-macro_rules! create_function {
-    ($func_name: ident) => {
-        fn $func_name() {
-            println!("You called {:?}()", stringify!($func_name));
-        }
-    };
+fn add_five_mut<F>(mut func: F)
+where
+    F: FnMut(i32),
+{
+    func(5)
 }
 
-create_function!(foo);
-create_function!(bar);
-
-macro_rules! print_result {
-    ($expression: expr) => {
-        println!("{:?} = {:?}", stringify!($expression), $expression);
-    };
+struct ClassicCars {
+    make: &'static str,
+    models: Vec<(&'static str, i32)>,
 }
 
-// `test!` will compare `$left` and `$right`
-// in different ways depending on how you invoke it:
-macro_rules! test {
-    // Arguments don't need to be separated by a comma.
-    // Any template can be used!
-    ($left:expr; and $right:expr) => {
-        println!("{:?} and {:?} is {:?}",
-                 stringify!($left),
-                 stringify!($right),
-                 $left && $right)
-    };
-    // ^ each arm must end with a semicolon.
-    ($left:expr; or $right:expr) => {
-        println!("{:?} or {:?} is {:?}",
-                 stringify!($left),
-                 stringify!($right),
-                 $left || $right)
-    };
-}
-
-// `find_min!` will calculate the minimum of any number of arguments.
-macro_rules! find_min {
-    // Base case:
-    ($x:expr) => ($x);
-    // `$x` followed by at least one `$y,`
-    ($x:expr, $($y:expr),+) => (
-        // Call `find_min!` on the tail `$y`
-        std::cmp::min($x, find_min!($($y),+))
-    )
+impl ClassicCars {
+    fn smart_get<F>(&self, f: F) 
+    where
+        F: Fn(&Vec<(&'static str, i32)>) 
+    {
+        f(&self.models)
+    }
 }
 
 fn main() {
-    say_hello!();
+    let clzr = |num| num + 1;
+    let fn_hola = || {
+        println!("hi");
+    };
+    println!("number is {}", clzr(1));
+    fn_hola();
 
-    foo();
-    bar();
+    let myvalue = 5;
+    let clzr2 = |num| num + myvalue;
+    println!("number is {}", clzr2(5));
 
-    print_result!(1u32 + 1);
-    print_result!({
-        let x = 1i32;
-        x * x + 2 *x -1
+    let clzr3 = |a, b| a + b;
+    println!("number is {}", clzr3(1, 2));
+
+    let clzr4 = |a, b| a + b;
+    println!("result: {}", clzr4("hola".to_string(), " mundo"));
+
+    let num1 = 6;
+    add_five(|x| println!("{}", num1 + x));
+
+    let mut num2 = 6;
+    add_five_mut(|x| {
+        num2 += x;
+        println!("{}", num2);
     });
 
-    test!(1i32 + 1 == 2i32; and 2i32 * 2 == 4i32);
-    test!(true; or false);
+    let car_collection = vec![
+        ("Thunderbird", 1960),
+        ("Cobra", 1966),
+        ("GT", 1967),
+        ("Mustang", 1969),
+    ];
+    let ford_models = ClassicCars {
+        make: "Ford",
+        models: car_collection,
+    };
 
-    println!("{}", find_min!(1));
-    println!("{}", find_min!(1 + 2, 2));
-    println!("{}", find_min!(5, 2 * 3, 4,-2));
+    ford_models.smart_get(|x| {
+        let res: Vec<_> = x.into_iter().filter(|x| x.1 > 1960).collect();
+        println!("results {:?}", res);
+        let res: Vec<_> = x.into_iter().map(|x| format!("{} {}", x.1, x.0)).collect();
+        println!("results {:?}", res);
+
+    });
 }
