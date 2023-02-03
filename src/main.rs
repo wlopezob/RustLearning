@@ -1,74 +1,123 @@
-fn add_five<F>(func: F)
-where
-    F: Fn(i32),
-{
-    func(5)
+pub use crate::error::Error;
+
+pub type Result<T> = core::result::Result<T, Error>;
+
+mod error;
+
+#[derive(Debug)]
+pub struct Task {
+    pub title: String,
+    pub done: bool,
+    pub desc: Option<String>,
 }
 
-fn add_five_mut<F>(mut func: F)
-where
-    F: FnMut(i32),
-{
-    func(5)
-}
-
-struct ClassicCars {
-    make: &'static str,
-    models: Vec<(&'static str, i32)>,
-}
-
-impl ClassicCars {
-    fn smart_get<F>(&self, f: F) 
-    where
-        F: Fn(&Vec<(&'static str, i32)>) 
-    {
-        f(&self.models)
+impl Default for Task {
+    fn default() -> Self {
+        Self {
+            title: "Untitled".to_string(),
+            done: false,
+            desc: None,
+        }
     }
 }
 
-fn main() {
-    let clzr = |num| num + 1;
-    let fn_hola = || {
-        println!("hi");
-    };
-    println!("number is {}", clzr(1));
-    fn_hola();
+impl Task {
+    fn new(title: impl Into<String>) -> Task {
+        Task {
+            title: title.into(),
+            done: false,
+            desc: None,
+        }
+    }
+}
 
-    let myvalue = 5;
-    let clzr2 = |num| num + myvalue;
-    println!("number is {}", clzr2(5));
+#[derive(Debug)]
+pub struct Request {
+    url: String,
+    method: String,
+    headers: Vec<(String, String)>,
+    body: Option<String>,
+}
 
-    let clzr3 = |a, b| a + b;
-    println!("number is {}", clzr3(1, 2));
+#[derive(Default, Clone)]
+pub struct RequestBuilder {
+    url: Option<String>,
+    method: Option<String>,
+    headers: Vec<(String, String)>,
+     body: Option<String>,
+}
 
-    let clzr4 = |a, b| a + b;
-    println!("result: {}", clzr4("hola".to_string(), " mundo"));
+impl RequestBuilder {
+    pub fn new() -> Self {
+        RequestBuilder::default()
+    }
 
-    let num1 = 6;
-    add_five(|x| println!("{}", num1 + x));
+    pub fn url(mut self, url: impl Into<String>) -> Self {
+        self.url.insert(url.into());
+        self
+    }
 
-    let mut num2 = 6;
-    add_five_mut(|x| {
-        num2 += x;
-        println!("{}", num2);
-    });
+    pub fn method(mut self, method: impl Into<String>) -> Self {
+        self.method.insert(method.into());
+        self
+    }
 
-    let car_collection = vec![
-        ("Thunderbird", 1960),
-        ("Cobra", 1966),
-        ("GT", 1967),
-        ("Mustang", 1969),
-    ];
-    let ford_models = ClassicCars {
-        make: "Ford",
-        models: car_collection,
-    };
+    pub fn body(mut self, body: impl Into<String>) ->  Self {
+        self.body.insert(body.into());
+        self
+    }
 
-    ford_models.smart_get(|x| {
-        let res: Vec<_> = x.into_iter().filter(|x| x.1 > 1960).collect();
-        println!("results {:?}", res);
-        let res: Vec<_> = x.into_iter().map(|x| format!("{} {}", x.1, x.0)).collect();
-        println!("results {:?}", res);
+    pub fn header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
+        self.headers.push((name.into(), value.into()));
+        self
+    }
 
-    });
+    pub fn build(self) -> Result<Request> {
+        let Some(url) = self.url else {
+            return Err(Error::Static("No URL"));
+        };
+        let method = self
+            .method
+            .unwrap_or_else(|| "GET".to_string());
+
+        Ok(Request {
+            url,
+            method,
+            headers: self.headers,
+            body: self.body,
+        })
+    }
+}
+fn main() -> Result<()> {
+    // let task = Task {
+    //     title: "demo".to_string(),
+    //     done: false,
+    //     desc: Some("desc".to_string()),
+    // };
+
+    // let task = Task::new("Task 01");
+
+    // let task: Option<Task> = None;
+    // let task = task.unwrap_or_default();
+
+    // let task = Task {
+    //     done: true,
+    //     ..Default::default()
+    // };
+
+    // let task = Task {
+    //     done: true,
+    //     ..Task::new("Cool title")
+    // };
+
+    let mut req_builder = RequestBuilder::new().url("http://localhost").method("GET");
+    let req_builder = req_builder.header("HOST", "localhost");
+    let req = req_builder.clone().build()?;
+
+    print!("{req:#?}");
+
+    let req = req_builder.header("HOST", "localhost").build()?;
+    print!("{req:#?}");
+    
+    Ok(())
 }
